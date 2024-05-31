@@ -1,0 +1,72 @@
+/* styles.css */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden; /* Prevent scrolling */
+}
+
+#header {
+    text-align: left;
+    color: #E9E4D4;
+    font-size: 24px;
+    padding-left: 4%;
+    margin: 0px 0px 0px 0px;
+    background-color: #2f2f2d;
+    display: flex;
+    align-items: center; /* Center the header content vertically */
+    height: 50px; /* Fixed height for the header */
+    flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+#left-column {
+    flex: 0 0 30%; /* Take up 30% of the available space */
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+#right-column {
+    flex: 0 0 70%; /* Take up 70% of the available space */
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+#appcontainer {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box; /* Include padding and border in width and height */
+}
+
+#columncontainer {
+    display: flex;
+    /* height: calc(100vh - 50px); /* Subtract header height from viewport height */
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden; /* Prevent overflow */
+}
+
+#patient-details {
+    flex-basis: 50%; /* Take 50% of the parent's height */
+    overflow: auto; /* Ensure individual elements handle overflow */
+}
+
+#map-iframe {
+    flex-basis: 50%; /* Take 50% of the parent's height */
+    overflow: auto; /* Ensure individual elements handle overflow */
+    border: 0;
+}
+
+#gemini-response {
+    flex-basis: 50%; /* Take 50% of the parent's height */
+    overflow: auto; /* Ensure individual elements handle overflow */
+    border: 5px solid #FFBD2E;
+    border-radius: 10px;
+}
+
+#aqi-graph {
+    flex-basis: 50%; /* Take 50% of the parent's height */
+    overflow: auto; /* Ensure individual elements handle overflow */
+}

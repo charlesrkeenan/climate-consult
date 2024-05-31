@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize Dash app and Flask server
-app = Dash(__name__, use_pages=True, meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
+app = Dash(use_pages=True, meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 server = app.server
 server.secret_key = os.getenv('SECRET_KEY')
 app.title = "Smoke Specialist"
@@ -46,6 +46,12 @@ def redirect_uri():
     app.logger.info("redirecting to the /visualization URL")
     return redirect('/visualization')
 
+# Add X-Frame-Options and CSP header to enable iFraming
+@server.after_request
+def apply_csp(response):
+    response.headers['X-Frame-Options'] = 'ALLOWALL'  # Loosest setting for X-Frame-Options
+    response.headers['Content-Security-Policy'] = "frame-ancestors *"  # Loosest setting for CSP
+    return response
     
 if __name__ == '__main__':
     app.run(port=5000, debug=True)

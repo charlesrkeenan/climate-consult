@@ -28,12 +28,117 @@ def get_smart():
     else:
         return client.FHIRClient(settings=app_settings, save_func=save_state)
 
-def retrieve_address_string(addresses):
-    # Check how many addresses are available
-    if len(addresses) == 1:
-        address = addresses[0]
+def retrieve_current_health_conditions(conditions):
+    # Check modifier elements, then append the code (text or coding.display) to a list and return
+    health_conditions_list = []
+    for condition in conditions:
+        print(condition.as_json())
+        append_condition = True
+        if hasattr(condition, 'clinicalStatus'):
+            for coding in condition.clinicalStatus.coding:
+                print(f"Clinical status: {coding.code}")
+                if coding.code not in ['active', 'recurrence', 'relapse']:
+                    append_condition = False
+        print("clinicalStatus passed.")
+        if hasattr(condition, 'verificationStatus'):
+            for coding in condition.verificationStatus.coding:
+                print(f"Verification status: {coding.code}")
+                if coding.code not in ['unconfirmed', 'provisional', 'differential', 'confirmed']:
+                    append_condition = False
+        print("verificationStatus passed.")
+        if append_condition:
+            if hasattr(condition, 'code') and hasattr(condition.code, 'text'):
+                print("code.text detected.")
+                health_conditions_list.append(condition.code.text)
+            elif hasattr(condition, 'code') and hasattr(condition.code, 'coding'):
+                print("code.coding detected.")
+                for coding in condition.code.coding:
+                    if hasattr(coding, 'display'):
+                        print("code.coding.display detected.")
+                        health_conditions_list.append(coding.display)
+            else:
+                raise Exception("A Condition resource has no 'code' element")
+    return health_conditions_list
+
+def generate_prompt(sex, date_of_birth, health_conditions, current_dt, aqi_results):
+    return f""""
+    -------------------------------
+    Prompt Context
+
+    Imagine you're approached by healthcare professionals seeking guidance on how to mitigate the health risks or treat the health complications 
+    associated with wildfire smoke exposure for their patients. These patients may include individuals with respiratory conditions, cardiovascular diseases, 
+    or other health issues that can be exacerbated by poor air quality during 
+    wildfires. Your role as the AI specialist is to provide a tailored consultation based on the specific characteristics and environment of the patient. 
+    The specific characteristics or environment of the patient may be provided to you in a structured format, like HL7 FHIR.
+
+    Your consultation should fulfill the following criteria:
+
+    Assessment of Risk Factors: Assess the level of risk for each patient based on their individual characteristics and the severity of the wildfire smoke exposure in their area.
+
+    Personalized Recommendations: Based on the patient's characteristics, risk factors, and environment, offer personalized recommendations to the healthcare professional
+
+    Follow-up and Monitoring: Suggest follow-up measures for healthcare professionals to monitor patients' health status, adjust interventions as needed 
+    and provide ongoing support during periods of heightened wildfire smoke exposure.
+
+    Additional Considerations:
+
+    Emphasize the importance of proactive measures to reduce exposure to wildfire smoke, especially for vulnerable populations.
+    Provide evidence-based recommendations supported by scientific research and guidelines from relevant health authorities.
+    Address any potential limitations or challenges in implementing recommended interventions, considering factors such as cost, accessibility, and patient compliance.
+    -------------------------------
+    Patient Details
+
+    Sex: {sex}
+    Date of Birth: {date_of_birth}
+    Health Conditions: {health_conditions}
+
+    Here are the past, present, and forecasted Air Quality Index measurements for the patient's primary address. It is a list of key-value pairs, 
+    where the key is the datetime and the value is the AQI. Right now, The current datetime is {current_dt}.
+    
+    {aqi_results}
+
+    Please generate a tailored consultation for this patient.
+    -------------------------------
+    """
+
+def generate_iframe(address):
+    url_escaped_address = urllib.parse.quote(address, safe='') # URL escape the address for embedding a Maps iFrame
+    return f"https://www.google.com/maps/embed/v1/place?key={os.getenv('GOOGLE_MAPS_API_KEY')}&q={url_escaped_address}&zoom=11"
+
+def get_patient_demographics(patient):
+    # Selecting the official name or first available name
+    name = None
+    for name in patient.name:
+        # Check if the name has the "official" use code
+        if "official" in name.use:
+            firstNames = " ".join(name.given)
+            name = name.text if name.text is not None else firstNames + " " + name.family
+            break  # If found, no need to check further
+    # if no "official" name found, use the first one available
+    if not name:
+        firstNames = " ".join(patient.name[0].given)
+        name = patient.name[0].text if patient.name[0].text is not None else firstNames + " " + patient.name[0].family
+
+    # Sex (called gender in FHIR R4)
+    sex = patient.gender if patient.gender else "Unknown"
+
+    # Birthday
+    birthday = patient.birthDate.isostring if patient.birthDate else "Unknown"
+    """
+    # Identifier
+    identifier = 'UNCONFIRMED' # Initialize the identifier value as unconfirmed
+    for identifierObj in patient.identifier:
+        if identifierObj.type:
+            for coding in identifierObj.type.coding:
+                if coding.system == fhir_identifier_configuration.get('identifier.type.coding.system') and coding.code == fhir_identifier_configuration.get('identifier.type.coding.code'):
+                    identifier = identifierObj.value
+                    break
+    """
+    # Address
+    if len(patient.address) == 1:
+        address = patient.address[0]
         if address.text:
-            return address.text
+            address = address.text
         else:
             print(address)
             # If 'text' property isn't present or is empty, concatenate address fields
@@ -43,9 +148,8 @@ def retrieve_address_string(addresses):
             state = address.state if (address, 'state') else ''
             postal_code = address.postalCode if (address, 'postalCode') else ''
             country = address.country if (address, 'country') else ''
-            full_address = ', '.join(filter(None, [', '.join(lines), city, district, state, postal_code, country]))
-            return full_address
-    elif len(addresses) > 1:
+            address = ', '.join(filter(None, [', '.join(lines), city, district, state, postal_code, country]))
+    elif len(patient.address) > 1:
         raise Exception("Multiple addresses detected!")
     """
     latest_address = None
@@ -80,63 +184,4 @@ def retrieve_address_string(addresses):
 
     return latest_address
     """
-def retrieve_health_conditions_list(Condition):
-    # Check modifier elements, then append the code (text or coding.display) to a list and return
-    pass
-
-def generate_prompt(sex, date_of_birth, health_conditions, current_dt, aqi_results):
-    return f""""
-    -------------------------------
-    Prompt Context
-
-    Imagine you're approached by healthcare professionals seeking guidance on how to mitigate the health risks associated with wildfire smoke exposure for their patients. 
-    These patients may include individuals with respiratory conditions, cardiovascular diseases, or other health issues that can be exacerbated by poor air quality during 
-    wildfires. Your role as the AI specialist is to provide a tailored consultation based on the specific needs and conditions of the patient. 
-    Consider factors such as sex, age, existing health conditions, and the air quality conditions surrounding the patient's address.
-
-    Your consultation should fulfill the following criteria:
-
-    Understanding Patient Profiles: Gather information about each patient, including their medical history, age, pre-existing conditions, and any medications they may be taking.
-
-    Assessment of Risk Factors: Assess the level of risk for each patient based on their individual profile and the severity of the wildfire smoke exposure in their area.
-
-    Personalized Recommendations: Offer personalized recommendations to healthcare professionals, including advice on indoor air quality improvement, use of air purifiers, 
-    proper ventilation techniques, medication adjustments, and lifestyle modifications to minimize exposure and mitigate health risks.
-
-    Follow-up and Monitoring: Suggest follow-up measures for healthcare professionals to monitor patients' health status, adjust interventions as needed 
-    and provide ongoing support during periods of heightened wildfire smoke exposure.
-
-    Additional Considerations:
-
-    Emphasize the importance of proactive measures to reduce exposure to wildfire smoke, especially for vulnerable populations.
-    Provide evidence-based recommendations supported by scientific research and guidelines from relevant health authorities.
-    Address any potential limitations or challenges in implementing recommended interventions, considering factors such as cost, accessibility, and patient compliance.
-    -------------------------------
-    Patient Details
-
-    Sex: {sex}
-    Date of Birth: {date_of_birth}
-    Health Conditions: {health_conditions}
-
-    Here are the past, present, and forecasted Air Quality Index measurements for the patient's primary address. It is a list of key-value pairs, 
-    where the key is the datetime and the value is the AQI. Right now, The current datetime is {current_dt}.
-    
-    {aqi_results}
-
-    Please generate a tailored consultation for this patient.
-    -------------------------------
-
-    """
-
-def generate_iframe(address):
-    url_escaped_address = urllib.parse.quote(address, safe='') # URL escape the address for embedding a Maps iFrame
-    return f"""
-    <iframe
-        width="450"
-        height="250"
-        frameborder="0" style="border:0"
-        referrerpolicy="no-referrer-when-downgrade"
-        src="https://www.google.com/maps/embed/v1/place?key={os.getenv('GOOGLE_MAPS_API_KEY')}&q={url_escaped_address}"
-        allowfullscreen>
-    </iframe>
-    """
+    return (name, sex, birthday, address)
