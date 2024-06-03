@@ -2,9 +2,8 @@
 import dash
 from dash import html, dcc, callback, Input, Output, get_app
 from dash.exceptions import PreventUpdate
-import plotly.express as px
-import plotly.graph_objects as go
 from utils import get_smart, generate_iframe, generate_prompt, retrieve_current_health_conditions, get_patient_demographics
+from figure import generate_figure
 from fhirclient.models.patient import Patient
 from fhirclient.models.condition import Condition
 import concurrent.futures
@@ -16,13 +15,15 @@ from datetime import datetime, timezone, timedelta
 import os
 import google.generativeai as genai
 
+# Front end design, support for medications, Gemini prompt + html header, demographics + summary lists
+
 dash.register_page(__name__, path='/visualization')
 app = get_app()
 
 # Define the layout
 layout = html.Div(id='appcontainer', children=[
     dcc.Location(id='url'),
-    html.Header(id='header', children="Smoke Specialist"),
+    html.Header(id='header', children="🔥 Smoke Specialist"),
     dcc.Loading(type='circle', children=[
         html.Div(id='columncontainer', children=[
             html.Div(id='left-column', children=[
@@ -145,39 +146,13 @@ def handle_callback(href):
                     else:
                         break
     # Sort the AQI results in ascending order
-    # sorted_aqi_results = dict(sorted(aqi_results.items()))
-
+    sorted_aqi_results = dict(sorted(aqi_results.items()))
     # Generate figure
-    figure = go.Figure()
+    app.logger.debug(f"Here's the first key in the AQI results dict: {next(iter(sorted_aqi_results))}")
 
-    # Create the traces
-    figure.add_trace(go.Scatter(
-        x=[dt for dt in aqi_results.keys() if dt <= current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ')],
-        y=[aqi_results[dt] for dt in aqi_results.keys() if dt <= current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ')],
-        mode='lines',
-        line=dict(width=2, color='black')
-    ))
-    figure.add_trace(go.Scatter(
-        x=[dt for dt in aqi_results.keys() if dt >= current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ')],
-        y=[aqi_results[dt] for dt in aqi_results.keys() if dt >= current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ')],
-        mode='lines',
-        line=dict(dash='dot', width=2, color='grey')
-    ))
-    figure.update_layout(
-        title='AQI History and Forecast',
-        xaxis=dict(tickformat='%Y-%m-%d'),
-        showlegend=False,
-        font=dict(
-                size=10,
-                color="black"
-            ),
-        title_font=dict(
-            size=14,
-            color='black'
-        )
-    )
-
-
+    figure = generate_figure(aqi_results, current_dt)
+    """
+    COMMENTED OUT TO SAVE $ AND TIME
     # Ask google gemini to make a recommendation for the patient, given their age, sex, conditions, and AQI forecast. Gemini needs to be prompted with AQI background.
     genai.configure(api_key=os.getenv('GOOGLE_GEMINI_API_KEY'))
     model = genai.GenerativeModel(os.getenv('GOOGLE_GEMINI_MODEL'))
@@ -188,15 +163,16 @@ def handle_callback(href):
         current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ'),
         aqi_results
     )
+
     app.logger.debug(f'PROMPT: {prompt}')
     gemini_response = model.generate_content(prompt)
     print(gemini_response.text) # When designing the UI, you should convert this response to markdown. See Google documentation.
-
+    """
     # Render the patient's details, detected address, and AQI viz
     return (
         f"Name: {name}\nDate of Birth: {birthday}\nSex: {sex}\nCurrent health conditions: {current_health_conditions}",
-        f"📍 Address: {address}",
+        f"📍 {address}",
         maps_iframe,
-        gemini_response.text,
+        " ⚠️This is Smoke Specialist's response!",
         figure
     )
