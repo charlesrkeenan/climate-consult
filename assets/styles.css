@@ -69,4 +69,9 @@ html, body {
 #aqi-graph {
     flex-basis: 50%; /* Take 50% of the parent's height */
     overflow: auto; /* Ensure individual elements handle overflow */
+    border-top: 2px solid grey;
+}
+
+#address {
+    border-top: 2px solid grey;
 }
