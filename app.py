@@ -15,14 +15,9 @@ server = app.server
 server.secret_key = os.getenv('SECRET_KEY')
 app.title = "Smoke Specialist"
 
-# Set logging level from environment variable, default to INFO if not set
+# Set logging level from environment variable, default to INFO if not set. Use Dash's built-in stream handler.
 log_level = os.environ.get('LOGGING_LEVEL', 'INFO').upper()
 app.logger.setLevel(getattr(logging, log_level))
-# Create a StreamHandler to write log messages to stdout
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(getattr(logging, log_level))
-# Add the handler to the app's logger
-app.logger.addHandler(stream_handler)
 
 # Dash layout
 app.layout = html.Div([page_container])

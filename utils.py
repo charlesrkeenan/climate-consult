@@ -36,16 +36,12 @@ def retrieve_current_health_conditions(conditions):
         append_condition = True
         if hasattr(condition, 'clinicalStatus'):
             for coding in condition.clinicalStatus.coding:
-                print(f"Clinical status: {coding.code}")
                 if coding.code not in ['active', 'recurrence', 'relapse']:
                     append_condition = False
-        print("clinicalStatus passed.")
         if hasattr(condition, 'verificationStatus'):
             for coding in condition.verificationStatus.coding:
-                print(f"Verification status: {coding.code}")
                 if coding.code not in ['unconfirmed', 'provisional', 'differential', 'confirmed']:
                     append_condition = False
-        print("verificationStatus passed.")
         if append_condition:
             if hasattr(condition, 'code') and hasattr(condition.code, 'text'):
                 print("code.text detected.")
