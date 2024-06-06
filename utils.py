@@ -1,9 +1,12 @@
 from flask import session
 from fhirclient import client
 from fhirclient.models.condition import Condition
+from fhirclient.models.bundle import Bundle
 import os
 from datetime import datetime
 import urllib.parse
+import dash
+from dash import dash_table
 
 # SMART on FHIR configuration
 app_settings = {
@@ -28,59 +31,71 @@ def get_smart():
     else:
         return client.FHIRClient(settings=app_settings, save_func=save_state)
 
-def retrieve_current_health_conditions(conditions):
-    # Check modifier elements, then append the code (text or coding.display) to a list and return
+def generate_clinical_details_table(conditions):
+    # Define the list to store condition details
     health_conditions_list = []
+
+    # Iterate through each condition and collect the necessary details
     for condition in conditions:
-        print(condition.as_json())
-        append_condition = True
-        if hasattr(condition, 'clinicalStatus'):
-            for coding in condition.clinicalStatus.coding:
-                if coding.code not in ['active', 'recurrence', 'relapse']:
-                    append_condition = False
-        if hasattr(condition, 'verificationStatus'):
-            for coding in condition.verificationStatus.coding:
-                if coding.code not in ['unconfirmed', 'provisional', 'differential', 'confirmed']:
-                    append_condition = False
-        if append_condition:
-            if hasattr(condition, 'code') and hasattr(condition.code, 'text'):
-                print("code.text detected.")
-                health_conditions_list.append(condition.code.text)
-            elif hasattr(condition, 'code') and hasattr(condition.code, 'coding'):
-                print("code.coding detected.")
+            
+        condition_name = ''
+        if hasattr(condition, 'code'):
+            if hasattr(condition.code, 'text'):
+                condition_name = condition.code.text
+            elif hasattr(condition.code, 'coding'):
                 for coding in condition.code.coding:
                     if hasattr(coding, 'display'):
-                        print("code.coding.display detected.")
-                        health_conditions_list.append(coding.display)
+                        condition_name = coding.display
+                        break
             else:
                 raise Exception("A Condition resource has no 'code' element")
-    return health_conditions_list
+
+        clinical_status = 'Unknown'
+        if hasattr(condition, 'clinicalStatus'):
+            if hasattr(condition.clinicalStatus, 'text'):
+                clinical_status = condition.clinicalStatus.text
+            if hasattr(condition.clinicalStatus, 'coding'):
+                clinical_status = condition.clinicalStatus.coding[0].code
+
+        verification_status = 'Unknown'
+        if hasattr(condition, 'verificationStatus'):
+            if hasattr(condition.verificationStatus, 'text'):
+                verification_status = condition.verificationStatus.text
+            if hasattr(condition.verificationStatus, 'coding'):
+                verification_status = condition.verificationStatus.coding[0].code
+
+        health_conditions_list.append({
+            'condition_name': condition_name,
+            'clinical_status': clinical_status,
+            'verification_status': verification_status,
+        })
+
+    # Sort conditions by date (latest first)
+    health_conditions_list.sort(key=lambda x: x['clinical_status'])
+
+    # Create Dash table
+    table = dash_table.DataTable(
+        id='conditions-table',
+        columns=[
+            {'name': 'Condition Name', 'id': 'condition_name'},
+            {'name': 'Clinical Status', 'id': 'clinical_status'},
+            {'name': 'Verification Status', 'id': 'verification_status'},
+        ],
+        data=health_conditions_list,
+        sort_action='native'
+    )
+
+    return table
 
 def generate_prompt(sex, date_of_birth, health_conditions, current_dt, aqi_results):
     return f""""
     -------------------------------
     Prompt Context
 
-    Imagine you're approached by healthcare professionals seeking guidance on how to mitigate the health risks or treat the health complications 
-    associated with wildfire smoke exposure for their patients. These patients may include individuals with respiratory conditions, cardiovascular diseases, 
-    or other health issues that can be exacerbated by poor air quality during 
-    wildfires. Your role as the AI specialist is to provide a tailored consultation based on the specific characteristics and environment of the patient. 
-    The specific characteristics or environment of the patient may be provided to you in a structured format, like HL7 FHIR.
-
-    Your consultation should fulfill the following criteria:
-
-    Assessment of Risk Factors: Assess the level of risk for each patient based on their individual characteristics and the severity of the wildfire smoke exposure in their area.
-
-    Personalized Recommendations: Based on the patient's characteristics, risk factors, and environment, offer personalized recommendations to the healthcare professional
-
-    Follow-up and Monitoring: Suggest follow-up measures for healthcare professionals to monitor patients' health status, adjust interventions as needed 
-    and provide ongoing support during periods of heightened wildfire smoke exposure.
-
-    Additional Considerations:
-
-    Emphasize the importance of proactive measures to reduce exposure to wildfire smoke, especially for vulnerable populations.
-    Provide evidence-based recommendations supported by scientific research and guidelines from relevant health authorities.
-    Address any potential limitations or challenges in implementing recommended interventions, considering factors such as cost, accessibility, and patient compliance.
+    You have been approached by a healthcare professional seeking consultation on how to mitigate the health risks or treat the health complications 
+    associated with wildfire smoke exposure for their patient. Your role as the AI specialist is to provide a consultation based on 
+    the specific characteristics and environment of the patient, like their demographics, health conditions, and the severity of wildfire smoke 
+    exposure in their area.
     -------------------------------
     Patient Details
 
@@ -93,7 +108,6 @@ def generate_prompt(sex, date_of_birth, health_conditions, current_dt, aqi_resul
     
     {aqi_results}
 
-    Please generate a tailored consultation for this patient.
     -------------------------------
     """
 
@@ -181,3 +195,16 @@ def get_patient_demographics(patient):
     return latest_address
     """
     return (name, sex, birthday, address)
+
+def fetch_all_resources(resource_class, smart):
+    resources = []
+    next_url = resource_class.where(struct={'patient': smart.patient_id}).perform(smart.server)
+    
+    while next_url:
+        if next_url.entry:
+            resources.extend(entry.resource for entry in next_url.entry)
+        
+        next_link = next((link.url for link in next_url.link if link.relation == 'next'), None)
+        next_url = Bundle.read_from(next_link, smart.server) if next_link else None
+
+    return resources
