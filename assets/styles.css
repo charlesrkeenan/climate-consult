@@ -49,29 +49,56 @@ html, body {
 }
 
 #patient-details {
-    flex-basis: 50%; /* Take 50% of the parent's height */
+    flex-basis: 20%; /* Take 20% of the parent's height */
     overflow: auto; /* Ensure individual elements handle overflow */
+    box-sizing: border-box;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-bottom: 15px;
+}
+
+
+#clinical-details-div {
+    padding-left: 15px;
+    padding-right: 15px;
+    box-sizing: border-box;
+    flex-basis: 40%;
+    flex-grow: 1;
 }
 
 #map-iframe {
-    flex-basis: 50%; /* Take 50% of the parent's height */
-    overflow: auto; /* Ensure individual elements handle overflow */
     border: 0;
 }
 
+#location-div {
+    flex-basis: 40%; /* Take 40% of the parent's height */
+    border-top: 4px solid grey;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding-left: 15px;
+}
+
+#consultation-div {
+    display: flex;
+    flex-direction: column;
+    flex-basis: 60%;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-bottom: 15px;
+    box-sizing: border-box;
+}
+
 #gemini-response {
-    flex-basis: 50%; /* Take 50% of the parent's height */
     overflow: auto; /* Ensure individual elements handle overflow */
     border: 5px solid #FFBD2E;
     border-radius: 10px;
+    padding: 10px 10px 10px 10px;
+    flex-grow: 1;
 }
 
 #aqi-graph {
-    flex-basis: 50%; /* Take 50% of the parent's height */
+    flex-basis: 40%; /* Take 40% of the parent's height */
     overflow: auto; /* Ensure individual elements handle overflow */
-    border-top: 2px solid grey;
-}
-
-#address {
-    border-top: 2px solid grey;
+    border-top: 4px solid grey;
 }
