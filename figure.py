@@ -77,7 +77,7 @@ def generate_figure(aqi_results, current_dt):
             dtick = 86400000.0,
             ticks = "inside",
             ticklen = 5,
-            tickcolor = "white",
+            tickcolor = "black",
         )
     )
     figure.update_yaxes(
@@ -92,19 +92,22 @@ def generate_figure(aqi_results, current_dt):
             tickmode = "array",
             tickvals = [0, 50, 100, 150, 200, 300, 500],
             tick0 = 0,
-            tickcolor = "white"
         ),
         showlegend=False,
         font=dict(
-                size=10,
-                color="black"
+                size=12,
+                color="black",
+                family='Montserrat'
         ),
         title_font=dict(
-            size=14,
-            color='black'
+            size=17,
+            color='black',
+            weight='bold',
+            family='Montserrat'
         ),
         hovermode = "x",
-        plot_bgcolor = "white"
+        plot_bgcolor = '#F1F1F1',
+        paper_bgcolor = '#F1F1F1'
     )
     
     return figure

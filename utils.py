@@ -82,7 +82,22 @@ def generate_clinical_details_table(conditions):
             {'name': 'Verification Status', 'id': 'verification_status'},
         ],
         data=health_conditions_list,
-        sort_action='native'
+        sort_action='native',
+        style_header={
+            'color': 'black',
+            'font-family': 'Montserrat',
+            'padding': '5px',
+            'border': '1px solid grey',
+        },
+        style_cell={
+            'textAlign': 'left',
+            #'backgroundColor': '#F1F1F1',
+            'color': 'black',
+            'border': '1px solid grey',
+            'font-family': 'Montserrat',
+            'padding': '5px'
+        },
+        style_as_list_view=True
     )
 
     return table
@@ -113,7 +128,7 @@ def generate_prompt(sex, date_of_birth, health_conditions, current_dt, aqi_resul
 
 def generate_iframe(address):
     url_escaped_address = urllib.parse.quote(address, safe='') # URL escape the address for embedding a Maps iFrame
-    return f"https://www.google.com/maps/embed/v1/place?key={os.getenv('GOOGLE_MAPS_API_KEY')}&q={url_escaped_address}&zoom=11"
+    return f"https://www.google.com/maps/embed/v1/place?key={os.getenv('GOOGLE_MAPS_API_KEY')}&q={url_escaped_address}&zoom=11&maptype=satellite"
 
 def get_patient_demographics(patient):
     # Selecting the official name or first available name

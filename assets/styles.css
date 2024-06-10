@@ -1,5 +1,26 @@
-/* styles.css */
+@import url('https://fonts.googleapis.com/css2?family=Sriracha&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+
 html, body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    font-family: "Montserrat", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+}
+
+h3 {
+    font-size: 17px;
+}
+
+#appcontainer {
+    display: flex;
+    flex-direction: column;
     margin: 0;
     padding: 0;
     height: 100vh;
@@ -10,95 +31,97 @@ html, body {
 #header {
     text-align: left;
     color: #ffffff;
-    font-size: 24px;
-    padding-left: 4%;
+    font-size: 28px;
+    font-family: "Sriracha", cursive;
+    font-weight: 400;
+    font-style: normal;
+    padding: 0.25% 0% 0.25% 2%;
+    font-size: 28px;
     margin: 0px 0px 0px 0px;
     background-color: #2f2f2d;
-    display: flex;
-    align-items: center; /* Center the header content vertically */
-    height: 50px; /* Fixed height for the header */
-    flex-shrink: 0; /* Prevent header from shrinking */
+    flex: 1 1 4%;
 }
 
-#left-column {
-    flex: 0 0 30%; /* Take up 30% of the available space */
+#consultation-row {
     display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-}
-
-#right-column {
-    flex: 0 0 70%; /* Take up 70% of the available space */
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-}
-
-#appcontainer {
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box; /* Include padding and border in width and height */
-}
-
-#columncontainer {
-    display: flex;
-    /* height: calc(100vh - 50px); /* Subtract header height from viewport height */
-    height: 100vh;
-    width: 100vw;
+    flex-direction: row;
+    flex: 1 1 60%;
     overflow: hidden; /* Prevent overflow */
 }
 
+#aqi-row {
+    display: flex;
+    flex-direction: row;
+    flex: 1 1 36%;
+    overflow: hidden; /* Prevent overflow */
+    border-top: 4px solid grey;
+    background-color: #f1f1f1;
+}
+
+/*
+#loading-div {
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+}
+*/
+
+.left-column {
+    flex: 1 1 30%;
+    display: flex;
+    flex-direction: column;
+    padding: 0% 1% 2% 2%;
+}
+
+.right-column {
+    display: flex;
+    flex: 1 1 70%;
+    flex-direction: column;
+    padding: 0% 2% 2% 1%;
+    
+}
+
 #patient-details {
-    flex-basis: 20%; /* Take 20% of the parent's height */
-    overflow: auto; /* Ensure individual elements handle overflow */
-    box-sizing: border-box;
-    padding-left: 15px;
-    padding-right: 15px;
-    padding-bottom: 15px;
+    flex: 1 1 25%;
+    overflow: auto;
 }
 
 
 #clinical-details-div {
-    padding-left: 15px;
-    padding-right: 15px;
-    box-sizing: border-box;
-    flex-basis: 40%;
-    flex-grow: 1;
+    flex: 1 1 75%;
+    overflow: auto;
 }
 
+
 #map-iframe {
-    border: 0;
+    border: 1px solid grey;
+    border-radius: 5px;
+    flex: 1;
 }
 
 #location-div {
-    flex-basis: 40%; /* Take 40% of the parent's height */
-    border-top: 4px solid grey;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    padding-left: 15px;
-}
-
-#consultation-div {
-    display: flex;
-    flex-direction: column;
-    flex-basis: 60%;
-    padding-left: 15px;
-    padding-right: 15px;
-    padding-bottom: 15px;
-    box-sizing: border-box;
+    padding: 0% 0% 2% 2%;
+    flex: 1 1 30%;
 }
 
 #gemini-response {
-    overflow: auto; /* Ensure individual elements handle overflow */
+    overflow: auto;
     border: 5px solid #FFBD2E;
     border-radius: 10px;
     padding: 10px 10px 10px 10px;
-    flex-grow: 1;
+    flex: 1;
 }
 
 #aqi-graph {
-    flex-basis: 40%; /* Take 40% of the parent's height */
-    overflow: auto; /* Ensure individual elements handle overflow */
-    border-top: 4px solid grey;
+    overflow: auto;
+    flex: 1 1 70%;
 }
