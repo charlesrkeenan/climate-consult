@@ -14,7 +14,7 @@ from datetime import datetime, timezone, timedelta
 import os
 import google.generativeai as genai
 
-# TO DO: loading component, AQI legend, support for meds, no_update vs prevent_update, datetime/timezones
+# TO DO: support for meds, no_update vs prevent_update, datetime/timezones
 
 dash.register_page(__name__, path='/visualization')
 app = get_app()
@@ -22,7 +22,7 @@ app = get_app()
 # Define the layout
 layout = html.Div(id='appcontainer', children=[
     dcc.Location(id='url'),
-    # dcc.Loading(id='loading-div', type='cube', color = '#ff8000', style={'display': 'flex'}, fullscreen=True, children=[
+    dcc.Loading(parent_className='loading-div', type='cube', color = '#ff8000', fullscreen=True, children=[
         html.Div(id='header', children="🔥 SMOKE SPECIALIST"),
         html.Div(id='consultation-row', children=[
             html.Div(className='left-column', children=[
@@ -46,7 +46,7 @@ layout = html.Div(id='appcontainer', children=[
                 ]),
             dcc.Graph(id='aqi-graph')
         ]),
-    #])
+    ])
 ])
 
 @callback(
@@ -173,9 +173,7 @@ def handle_callback(href):
         f"""
         
         ### 👤 {name}
-        Identifier: **12345**  
-        Date of Birth: **{birthday}**  
-        Sex: **{sex}**""",
+        Identifier: **12345** | Date of Birth: **{birthday}** | Sex: **{sex}**""",
         table,
         f"📍 {address}",
         maps_iframe,

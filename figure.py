@@ -6,6 +6,7 @@ def generate_figure(aqi_results, current_dt):
 
     # Create the AQI line graph traces
     figure.add_trace(go.Scatter(
+        showlegend=False,
         name = "History",
         x=[dt for dt in aqi_results.keys() if dt <= current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ')],
         y=[aqi_results[dt] for dt in aqi_results.keys() if dt <= current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ')],
@@ -13,6 +14,7 @@ def generate_figure(aqi_results, current_dt):
         line=dict(width=2, color='black')
     ))
     figure.add_trace(go.Scatter(
+        showlegend=False,
         name = "Forecast",
         x=[dt for dt in aqi_results.keys() if dt >= current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ')],
         y=[aqi_results[dt] for dt in aqi_results.keys() if dt >= current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ')],
@@ -22,32 +24,25 @@ def generate_figure(aqi_results, current_dt):
 
     # Add the AQI range shapes
     aqi_ranges = [
-    {"range": [0, 50], "color": "green", "air pollution level": "Good"},
-    {"range": [50, 100], "color": "yellow", "air pollution level": "Moderate"},
-    {"range": [100, 150], "color": "orange", "air pollution level": "Unhealthy for Sensitive Groups"},
-    {"range": [150, 200], "color": "red", "air pollution level": "Unhealthy"},
+    {"range": [300, 500], "color": "maroon", "air pollution level": "Hazardous"},
     {"range": [200, 300], "color": "purple", "air pollution level": "Very Unhealthy"},
-    {"range": [300, 500], "color": "maroon", "air pollution level": "Hazardous"}
+    {"range": [150, 200], "color": "red", "air pollution level": "Unhealthy"},
+    {"range": [100, 150], "color": "orange", "air pollution level": "Unhealthy for Sensitive Groups"},
+    {"range": [50, 100], "color": "yellow", "air pollution level": "Moderate"},
+    {"range": [0, 50], "color": "green", "air pollution level": "Good"}
     ]
 
     # Add shapes for each AQI range
     for aqi_range in aqi_ranges:
         figure.add_hrect(
-            showlegend=False,
+            showlegend=True,
             name=aqi_range["air pollution level"],
             layer= 'below',
             line_width = 0,
             y0 = aqi_range["range"][0],
             y1 = aqi_range["range"][1],
             fillcolor= aqi_range["color"],
-            opacity= 0.66,
-            label = dict(
-                text = aqi_range["air pollution level"],
-                textposition = "top left",
-                yanchor = "top",
-                xanchor = "left",
-
-            )
+            opacity= 0.66
         )
 
     # Add the "NOW" indicator
@@ -62,12 +57,17 @@ def generate_figure(aqi_results, current_dt):
             width = 3, 
         ), 
         label = dict(
-            text = "NOW",
+            text = "TODAY",
             textangle = 0,
             xanchor = "left",
             yanchor = "middle",
-            padding = 5
-        )
+            padding = 5,
+            font=dict(
+                size=13,
+                color="black",
+                family='Montserrat'
+            ),
+        ),
     )
 
     # Update X and Y axis
@@ -93,9 +93,17 @@ def generate_figure(aqi_results, current_dt):
             tickvals = [0, 50, 100, 150, 200, 300, 500],
             tick0 = 0,
         ),
-        showlegend=False,
+        showlegend=True,
+        legend=dict(
+            itemclick=False,
+            itemdoubleclick=False,
+        ),
+        legend_font=dict(
+                family='Montserrat',
+                size=13
+        ),
         font=dict(
-                size=12,
+                size=13,
                 color="black",
                 family='Montserrat'
         ),
@@ -106,8 +114,9 @@ def generate_figure(aqi_results, current_dt):
             family='Montserrat'
         ),
         hovermode = "x",
-        plot_bgcolor = '#F1F1F1',
-        paper_bgcolor = '#F1F1F1'
+        plot_bgcolor = 'white',
+        paper_bgcolor = '#F1F1F1',
+        margin=dict(l=70, r=70, t=70, b=42),
     )
     
     return figure
