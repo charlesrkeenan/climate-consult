@@ -147,12 +147,10 @@ def handle_callback(href):
                     else:
                         break
     # Sort the AQI results in ascending order
-    sorted_aqi_results = dict(sorted(aqi_results.items()))
+    # sorted_aqi_results = dict(sorted(aqi_results.items()))
     # Generate figure
-    app.logger.debug(f"Here's the first key in the AQI results dict: {next(iter(sorted_aqi_results))}")
-
     figure = generate_figure(aqi_results, current_dt)
-    """
+
     # Ask google gemini to make a recommendation for the patient, given their age, sex, conditions, and AQI forecast. Gemini needs to be prompted with AQI background.
     genai.configure(api_key=os.getenv('GOOGLE_GEMINI_API_KEY'))
     model = genai.GenerativeModel(os.getenv('GOOGLE_GEMINI_MODEL'))
@@ -163,11 +161,8 @@ def handle_callback(href):
         current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ'),
         aqi_results
     )
-
-    app.logger.debug(f'PROMPT: {prompt}')
     gemini_response = model.generate_content(prompt)
-    print(gemini_response.text) # When designing the UI, you should convert this response to markdown. See Google documentation.
-    """
+
     # Render the patient's details, detected address, and AQI viz
     return (
         f"""
@@ -177,6 +172,6 @@ def handle_callback(href):
         table,
         f"📍 {address}",
         maps_iframe,
-        "THis is smoke specialist's consultation",
+        gemini_response.text,
         figure
     )
