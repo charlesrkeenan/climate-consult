@@ -4,7 +4,7 @@
 
 Smoke Specialist is a SMART on FHIR web app offering healthcare professionals an AI-assisted assessment of their patient's exposure to poor air quality, their risk factors, and possible clinical interventions. It's designed to be launched within their EHR interfaces with one click, presenting a patient-level visualization of the patient's demographics, air quality history and forecast for their primary address, health conditions, medication history, and a comprehensive AI consultation.
 
-![Smoke Specialist screenshot](assets\smoke_specialist_screenshot.png)
+![Smoke Specialist screenshot](assets/smoke_specialist_screenshot.png)
 
 # Getting Started
 1.  Install Python, Git, and Docker Desktop on your machine.
