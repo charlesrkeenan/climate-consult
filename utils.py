@@ -31,7 +31,11 @@ def get_smart():
     else:
         return client.FHIRClient(settings=app_settings, save_func=save_state)
 
-def generate_clinical_details_table(conditions):
+def generate_clinical_details_table(conditions, medications):
+    """
+    A function for processing a list of FHIR resource objects and arranging
+    them in a Dash table. Conditions are processed first, then Medications
+    """
     # Define the list to store condition details
     health_conditions_list = []
 
@@ -74,7 +78,7 @@ def generate_clinical_details_table(conditions):
     health_conditions_list.sort(key=lambda x: x['clinical_status'])
 
     # Create Dash table
-    table = dash_table.DataTable(
+    conditions_table = dash_table.DataTable(
         id='conditions-table',
         columns=[
             {'name': 'Condition Name', 'id': 'condition_name'},
@@ -100,9 +104,65 @@ def generate_clinical_details_table(conditions):
         style_as_list_view=True
     )
 
-    return table
+    # Define the list to store medication details
+    medications_list = []
 
-def generate_prompt(sex, date_of_birth, health_conditions, current_dt, aqi_results):
+    # Iterate through each condition and collect the necessary details
+    for medication in medications:
+            
+        medication_name = ''
+        if hasattr(medication, 'code'):
+            if hasattr(medication.code, 'text'):
+                medication_name = medication.code.text
+            elif hasattr(medication.code, 'coding'):
+                for coding in medication.code.coding:
+                    if hasattr(coding, 'display'):
+                        medication_name = coding.display
+                        break
+            else:
+                raise Exception("A medication resource has no 'code' element")
+
+        medication_status = 'Unknown'
+        if hasattr(medication, 'status'):
+            medication_status = medication.status
+
+        medications_list.append({
+            'medication_name': medication_name,
+            'medication_status': medication_status,
+        })
+
+    # Sort conditions by date (latest first)
+    medications_list.sort(key=lambda x: x['medication_status'])
+
+    # Create Dash table
+    medications_table = dash_table.DataTable(
+        id='medications-table',
+        columns=[
+            {'name': 'Medication Name', 'id': 'medication_name'},
+            {'name': 'Medication Status', 'id': 'medication_status'},
+        ],
+        data=medications_list,
+        sort_action='native',
+        style_header={
+            'color': 'black',
+            'font-family': 'Montserrat',
+            'padding': '5px',
+            'border': '1px solid grey',
+        },
+        style_cell={
+            'textAlign': 'left',
+            #'backgroundColor': '#F1F1F1',
+            'color': 'black',
+            'border': '1px solid grey',
+            'font-family': 'Montserrat',
+            'padding': '5px'
+        },
+        style_as_list_view=True
+    )
+
+    return conditions_table, medications_table
+
+def generate_prompt(sex, date_of_birth, health_conditions, medications, current_dt, aqi_results):
     return f""""
     -------------------------------
     Prompt Context
@@ -117,6 +177,7 @@ def generate_prompt(sex, date_of_birth, health_conditions, current_dt, aqi_resul
     Sex: {sex}
     Date of Birth: {date_of_birth}
     Health Conditions: {health_conditions}
+    Medications: {medications}
 
     Here are the past, present, and forecasted Air Quality Index measurements for the patient's primary address. It is a list of key-value pairs, 
     where the key is the datetime and the value is the AQI. Right now, The current datetime is {current_dt}.
