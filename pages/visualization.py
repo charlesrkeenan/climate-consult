@@ -6,7 +6,7 @@ from utils import get_smart, generate_iframe, generate_prompt, generate_clinical
 from figure import generate_figure
 from fhirclient.models.patient import Patient
 from fhirclient.models.condition import Condition
-from fhirclient.models.medication import Medication
+from fhirclient.models.medicationadministration import MedicationAdministration
 import googlemaps
 import requests
 import json
@@ -15,7 +15,8 @@ from datetime import datetime, timezone, timedelta
 import os
 import google.generativeai as genai
 
-# TO DO: support for meds, datetime/timezones, temperature data, rebrand as "Climate Consult"?
+# TO DO: message casper/sheazin, temperature data, rebrand as "Climate Consult", video submission?
+# https://open-meteo.com/en/docs#current=temperature_2m&past_days=31
 
 dash.register_page(__name__, path='/visualization')
 app = get_app()
@@ -31,7 +32,7 @@ layout = html.Div(id='appcontainer', children=[
                 html.Div(id='clinical-details-div', children=[
                     dcc.Tabs(id='clinical-details-table', children=[
                         dcc.Tab(id='conditions', label="Conditions"),
-                        dcc.Tab(id='medications', label="Medications")
+                        dcc.Tab(id='medications', label="Medication Administrations")
                     ]),
                 ]),
             ]),
@@ -62,10 +63,10 @@ layout = html.Div(id='appcontainer', children=[
 )
 def handle_callback(href):
     smart = get_smart()
-    # Retrieve Patient, Condition, and Medication resources
+    # Retrieve Patient, Condition, and Medication Administration resources
     patient = Patient.read(rem_id=smart.patient_id, server=smart.server)
-    conditions = fetch_all_resources(Condition, smart) # helper function to handle pagination
-    medications = fetch_all_resources(Medication, smart)
+    conditions = fetch_all_resources(Condition, smart)
+    medication_administrations = fetch_all_resources(MedicationAdministration, smart)
     # Check if address is not null
     if not (hasattr(patient, 'address') and len(patient.address) != 0):
         raise PreventUpdate("No address found for the patient.")
@@ -76,24 +77,22 @@ def handle_callback(href):
     except Exception as e:
         app.logger.error("An error occurred while parsing the patient's demographics", exc_info=True)
         raise PreventUpdate("Something went wrong processing the patient's demographics")
-    # Get patient's health conditions and generate table
+    # generate tables
     try:
-        conditions_table, medications_table = generate_clinical_details_table(conditions)
+        conditions_table, medication_administrations_table = generate_clinical_details_table(conditions, medication_administrations)
         # Convert conditions and medications to JSON serializable list
         conditions = [condition.as_json() for condition in conditions]
-        medications = [medication.as_json() for medication in medications]
+        medication_administrations = [medication_administration.as_json() for medication_administration in medication_administrations]
     except Exception as e:
-        app.logger.error("An error occurred while parsing the patient's Condition or Medication resources", exc_info=True)
-        raise PreventUpdate("Something went wrong processing the patient's health conditions or medications")
+        app.logger.error("An error occurred while parsing the patient's Condition or Medication Administration resources", exc_info=True)
+        raise PreventUpdate("Something went wrong processing the patient's health conditions or medication administrations")
 
     # Retrieve latitude + longitude of patient's address / retrieve embeddable google maps iFrame
     gmaps = googlemaps.Client(key=os.getenv('GOOGLE_MAPS_API_KEY'))
     # Geocoding an address
     geocode_result = gmaps.geocode(address)
     latitude = geocode_result[0]['geometry']['location']['lat']
-    print(latitude)
     longitude = geocode_result[0]['geometry']['location']['lng']
-    print(longitude)
     # Get iFrame
     maps_iframe = generate_iframe(address)
 
@@ -162,7 +161,7 @@ def handle_callback(href):
         patient.gender,
         patient.birthDate.isostring,
         conditions,
-        medications,
+        medication_administrations,
         current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ'),
         aqi_results
     )
@@ -175,7 +174,7 @@ def handle_callback(href):
         ### 👤 {name}
         Identifier: **12345** | Date of Birth: **{birthday}** | Sex: **{sex}**""",
         conditions_table,
-        medications_table,
+        medication_administrations_table,
         f"📍 {address}",
         maps_iframe,
         gemini_response.text,
