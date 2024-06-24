@@ -6,17 +6,17 @@ from utils import get_smart, generate_iframe, generate_prompt, generate_clinical
 from figure import generate_figure
 from fhirclient.models.patient import Patient
 from fhirclient.models.condition import Condition
+from fhirclient.models.encounter import Encounter
 from fhirclient.models.medicationadministration import MedicationAdministration
 import googlemaps
 import requests
 import json
-import pandas as pd
 from datetime import datetime, timezone, timedelta
 import os
 import google.generativeai as genai
 
-# TO DO: message casper/sheazin, temperature data, rebrand as "Climate Consult", video submission?
-# https://open-meteo.com/en/docs#current=temperature_2m&past_days=31
+# TO DO: Temperature data, rebrand as "Climate Consult", video/grant submission
+# https://open-meteo.com/en/docs#current=temperature_2m&past_days=31 OPEN METEO API IS THE WINNER
 
 dash.register_page(__name__, path='/visualization')
 app = get_app()
@@ -32,6 +32,7 @@ layout = html.Div(id='appcontainer', children=[
                 html.Div(id='clinical-details-div', children=[
                     dcc.Tabs(id='clinical-details-table', children=[
                         dcc.Tab(id='conditions', label="Conditions"),
+                        dcc.Tab(id='encounters', label="Encounters"),
                         dcc.Tab(id='medications', label="Medication Administrations")
                     ]),
                 ]),
@@ -54,6 +55,7 @@ layout = html.Div(id='appcontainer', children=[
 @callback(
     Output('patient-details', 'children'),
     Output('conditions', 'children'),
+    Output('encounters', 'children'),
     Output('medications', 'children'),
     Output('address', 'children'),
     Output('map-iframe', 'src'),
@@ -63,10 +65,11 @@ layout = html.Div(id='appcontainer', children=[
 )
 def handle_callback(href):
     smart = get_smart()
-    # Retrieve Patient, Condition, and Medication Administration resources
+    # Retrieve FHIR resources
     patient = Patient.read(rem_id=smart.patient_id, server=smart.server)
     conditions = fetch_all_resources(Condition, smart)
     medication_administrations = fetch_all_resources(MedicationAdministration, smart)
+    encounters = fetch_all_resources(Encounter, smart)
     # Check if address is not null
     if not (hasattr(patient, 'address') and len(patient.address) != 0):
         raise PreventUpdate("No address found for the patient.")
@@ -77,15 +80,16 @@ def handle_callback(href):
     except Exception as e:
         app.logger.error("An error occurred while parsing the patient's demographics", exc_info=True)
         raise PreventUpdate("Something went wrong processing the patient's demographics")
-    # generate tables
+    # Generate UI tables
     try:
-        conditions_table, medication_administrations_table = generate_clinical_details_table(conditions, medication_administrations)
-        # Convert conditions and medications to JSON serializable list
+        conditions_table, encounters_table, medication_administrations_table = generate_clinical_details_table(conditions, encounters, medication_administrations)
+        # Convert FHIR resources retrieved to JSON serializable lists
         conditions = [condition.as_json() for condition in conditions]
+        encounters = [encounter.as_json() for encounter in encounters]
         medication_administrations = [medication_administration.as_json() for medication_administration in medication_administrations]
     except Exception as e:
-        app.logger.error("An error occurred while parsing the patient's Condition or Medication Administration resources", exc_info=True)
-        raise PreventUpdate("Something went wrong processing the patient's health conditions or medication administrations")
+        app.logger.error("An error occurred while parsing the patient's FHIR resources", exc_info=True)
+        raise PreventUpdate("Something went wrong processing the patient's health records")
 
     # Retrieve latitude + longitude of patient's address / retrieve embeddable google maps iFrame
     gmaps = googlemaps.Client(key=os.getenv('GOOGLE_MAPS_API_KEY'))
@@ -149,31 +153,32 @@ def handle_callback(href):
                         data.update({'pageToken': response.json()['nextPageToken']})
                     else:
                         break
-    # Sort the AQI results in ascending order
-    # sorted_aqi_results = dict(sorted(aqi_results.items()))
+
     # Generate figure
     figure = generate_figure(aqi_results, current_dt)
 
-    # Ask google gemini to make a recommendation for the patient, given their age, sex, conditions, and AQI forecast. Gemini needs to be prompted with AQI background.
+    # Ask google gemini to make a recommendation for the patient, given their age, sex, health records, and AQI forecast.
     genai.configure(api_key=os.getenv('GOOGLE_GEMINI_API_KEY'))
     model = genai.GenerativeModel(os.getenv('GOOGLE_GEMINI_MODEL'))
     prompt = generate_prompt(
         patient.gender,
         patient.birthDate.isostring,
         conditions,
+        encounters,
         medication_administrations,
         current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ'),
         aqi_results
     )
     gemini_response = model.generate_content(prompt)
 
-    # Render the patient's details, detected address, and AQI viz
+    # Render the patient's details, records, detected address, and AQI visualization
     return (
         f"""
         
         ### 👤 {name}
         Identifier: **12345** | Date of Birth: **{birthday}** | Sex: **{sex}**""",
         conditions_table,
+        encounters_table,
         medication_administrations_table,
         f"📍 {address}",
         maps_iframe,

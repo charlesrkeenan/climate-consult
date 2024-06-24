@@ -31,10 +31,11 @@ def get_smart():
     else:
         return client.FHIRClient(settings=app_settings, save_func=save_state)
 
-def generate_clinical_details_table(conditions, medication_administrations):
+def generate_clinical_details_table(conditions, encounters, medication_administrations):
     """
     A function for processing a list of FHIR resource objects and arranging
-    them in a Dash table. Conditions are processed first, then Medications
+    them in a Dash table. Conditions are processed first, then Encounters, then
+    Medication Administrations
     """
     # Define the list to store condition details
     health_conditions_list = []
@@ -74,10 +75,10 @@ def generate_clinical_details_table(conditions, medication_administrations):
             'verification_status': verification_status,
         })
 
-    # Sort conditions by date (latest first)
+    # Sort conditions by status
     health_conditions_list.sort(key=lambda x: x['clinical_status'])
 
-    # Create Dash table
+    # Create Conditions Dash table
     conditions_table = dash_table.DataTable(
         id='conditions-table',
         columns=[
@@ -104,10 +105,76 @@ def generate_clinical_details_table(conditions, medication_administrations):
         style_as_list_view=True
     )
 
+    # Define the list to store Encounter details
+    encounters_list = []
+
+    # Iterate through each encounter and collect the necessary details
+    for encounter in encounters:
+        encounter_description = ''
+        if hasattr(encounter, 'serviceType') and encounter.serviceType != None:
+            if hasattr(encounter.serviceType, 'text'):
+                encounter_description = encounter.serviceType.text
+            elif hasattr(encounter.serviceType, 'coding'):
+                for coding in encounter.serviceType.coding:
+                    if hasattr(coding, 'display'):
+                        encounter_description = coding.display
+                        break
+        if hasattr(encounter, 'type'):
+            for codeableConcept in encounter.type:
+                if hasattr(codeableConcept, 'text'):
+                    encounter_description = codeableConcept.text
+                elif hasattr(codeableConcept, 'coding'):
+                    for coding in codeableConcept.coding:
+                        if hasattr(coding, 'display'):
+                            encounter_description = coding.display
+                            break
+        elif hasattr(encounter, 'class'):
+            encounter_class = getattr(encounter, 'class')
+            if hasattr(encounter_class, 'display'):
+                encounter_description = encounter_class.display
+        else:
+            raise Exception("An Encounter resource has no human readable element to serve as a description")
+
+        encounter_status = 'Unknown'
+        if hasattr(encounter, 'status'):
+            encounter_status = encounter.status
+        encounters_list.append({
+            'encounter_description': encounter_description,
+            'encounter_status': encounter_status,
+        })
+
+    # Sort encounters by status
+    encounters_list.sort(key=lambda x: x['encounter_status'])
+    # Create Encounters Dash table
+    encounters_table = dash_table.DataTable(
+        id='encounters-table',
+        columns=[
+            {'name': 'Encounter Description', 'id': 'encounter_description'},
+            {'name': 'Encounter Status', 'id': 'encounter_status'},
+        ],
+        data=encounters_list,
+        sort_action='native',
+        style_header={
+            'color': 'black',
+            'font-family': 'Montserrat',
+            'padding': '5px',
+            'border': '1px solid grey',
+        },
+        style_cell={
+            'textAlign': 'left',
+            #'backgroundColor': '#F1F1F1',
+            'color': 'black',
+            'border': '1px solid grey',
+            'font-family': 'Montserrat',
+            'padding': '5px'
+        },
+        style_as_list_view=True
+    )
+
     # Define the list to store medication administration details
     medication_administrations_list = []
 
-    # Iterate through each condition and collect the necessary details
+    # Iterate through each medication administration and collect the necessary details
     for medication_administration in medication_administrations:
             
         medication_administration_name = ''
@@ -133,10 +200,10 @@ def generate_clinical_details_table(conditions, medication_administrations):
             'medication_administration_status': medication_administration_status,
         })
 
-    # Sort conditions by date (latest first)
+    # Sort medication administrations by status
     medication_administrations_list.sort(key=lambda x: x['medication_administration_status'])
 
-    # Create Dash table
+    # Create Medication Administration Dash table
     medication_administrations_table = dash_table.DataTable(
         id='medications-table',
         columns=[
@@ -162,23 +229,24 @@ def generate_clinical_details_table(conditions, medication_administrations):
         style_as_list_view=True
     )
 
-    return conditions_table, medication_administrations_table
+    return conditions_table, encounters_table, medication_administrations_table
 
-def generate_prompt(sex, date_of_birth, health_conditions, medication_administrations, current_dt, aqi_results):
+def generate_prompt(sex, date_of_birth, health_conditions, encounters, medication_administrations, current_dt, aqi_results):
     return f""""
     -------------------------------
     Prompt Context
 
     You have been approached by a healthcare professional seeking consultation on how to mitigate the health risks or treat the health complications 
     associated with wildfire smoke exposure for their patient. Your role as the AI specialist is to provide a consultation based on 
-    the specific characteristics and environment of the patient, like their demographics, health conditions, and the severity of wildfire smoke 
-    exposure in their area.
+    the specific characteristics and environment of the patient, like their demographics, health conditions, medications, encounter history, and 
+    the severity of wildfire smoke exposure in their area.
     -------------------------------
     Patient Details
 
     Sex: {sex}
     Date of Birth: {date_of_birth}
     Health Conditions: {health_conditions}
+    Encounters: {encounters}
     Medication Administrations: {medication_administrations}
 
     Here are the past, present, and forecasted Air Quality Index measurements for the patient's primary address. It is a list of key-value pairs, 
@@ -228,7 +296,6 @@ def get_patient_demographics(patient):
         if address.text:
             address = address.text
         else:
-            print(address)
             # If 'text' property isn't present or is empty, concatenate address fields
             lines = address.line if hasattr(address, 'line') else []
             city = address.city if (address, 'city') else ''
