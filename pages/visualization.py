@@ -3,20 +3,17 @@ import dash
 from dash import html, dcc, callback, Input, Output, get_app
 from dash.exceptions import PreventUpdate
 from utils import get_smart, generate_iframe, generate_prompt, generate_clinical_details_table, get_patient_demographics, fetch_all_resources
-from figure import generate_figure
+from figures import generate_aqi_figure, generate_weather_figure
 from fhirclient.models.patient import Patient
 from fhirclient.models.condition import Condition
 from fhirclient.models.encounter import Encounter
 from fhirclient.models.medicationadministration import MedicationAdministration
 import googlemaps
-import requests
-import json
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 import os
 import google.generativeai as genai
 
-# TO DO: Temperature data, rebrand as "Climate Consult", video/grant submission
-# https://open-meteo.com/en/docs#current=temperature_2m&past_days=31 OPEN METEO API IS THE WINNER
+# TO DO: Temperature data, rebrand as "Climate Consult", find demo tool, sign up for Kaiber AI, video/grant submission
 
 dash.register_page(__name__, path='/visualization')
 app = get_app()
@@ -25,15 +22,15 @@ app = get_app()
 layout = html.Div(id='appcontainer', children=[
     dcc.Location(id='url'),
     dcc.Loading(parent_className='loading-div', type='cube', color = '#ff8000', fullscreen=True, children=[
-        html.Div(id='header', children="🔥 SMOKE SPECIALIST"),
+        html.Div(id='header', children="🌎 CLIMATE CONSULT 🩺"),
         html.Div(id='consultation-row', children=[
             html.Div(className='left-column', children=[
                 dcc.Markdown(id='patient-details'),
                 html.Div(id='clinical-details-div', children=[
                     dcc.Tabs(id='clinical-details-table', children=[
-                        dcc.Tab(id='conditions', label="Conditions"),
-                        dcc.Tab(id='encounters', label="Encounters"),
-                        dcc.Tab(id='medications', label="Medication Administrations")
+                        dcc.Tab(id='conditions', label="Conditions", className='health-records-tab-label', selected_className='health-records-selected-tab-label'),
+                        dcc.Tab(id='encounters', label="Encounters", className='health-records-tab-label', selected_className='health-records-selected-tab-label'),
+                        dcc.Tab(id='medications', label="Medication Administrations", className='health-records-tab-label', selected_className='health-records-selected-tab-label')
                     ]),
                 ]),
             ]),
@@ -42,12 +39,19 @@ layout = html.Div(id='appcontainer', children=[
                 dcc.Markdown(id='gemini-response')
             ])
         ]),
-        html.Div(id='aqi-row', children=[
+        html.Div(id='environmental-data-row', children=[
             html.Div(id='location-div', children=[
                     html.H3(id='address'),
                     html.Iframe(id='map-iframe', referrerPolicy="no-referrer-when-downgrade")
                 ]),
-            dcc.Graph(id='aqi-graph')
+            dcc.Tabs(id='environmental-data-tabs', parent_className="environmental-data-tabs", content_className="figure-tab", children=[
+                    dcc.Tab(id='aqi-tab', label="😶‍🌫️ Air Quality", className='tab-label', selected_className='selected-tab-label', children=[
+                        dcc.Graph(id='aqi-graph')
+                    ]),
+                    dcc.Tab(id='temperature-tab', label="🌡️ Temperature", className='tab-label', selected_className='selected-tab-label', children=[
+                        dcc.Graph(id='temperature-graph')
+                    ]),
+                ])
         ]),
     ])
 ])
@@ -61,6 +65,7 @@ layout = html.Div(id='appcontainer', children=[
     Output('map-iframe', 'src'),
     Output('gemini-response', 'children'),
     Output('aqi-graph', 'figure'),
+    Output('temperature-graph', 'figure'),
     Input('url', 'href')
 )
 def handle_callback(href):
@@ -100,62 +105,10 @@ def handle_callback(href):
     # Get iFrame
     maps_iframe = generate_iframe(address)
 
-    # retrieve AQI history, current conditions, and forecast, then generate figure
-    aqi_results = {} # aqi_results = pd.DataFrame(columns=['Time', 'AQI'])
+    # Generate environmental data and figures
     current_dt = datetime.now(timezone.utc)
-    app.logger.debug(f"Current datetime: {current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ')}")
-    for time in ['forecast', 'currentConditions', 'history']:
-        url = f'https://airquality.googleapis.com/v1/{time}:lookup?key={os.getenv('GOOGLE_MAPS_API_KEY')}'
-        match time:
-            case 'history': # Retrieve historical AQI
-                data = {
-                        "hours": 720,
-                        "pageSize": 720,
-                        "location": {
-                            "latitude": latitude,
-                            "longitude": longitude
-                        }
-                    }
-                while True: # A while loop to handle pagination
-                    response = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(data))
-                    for hourly_result in response.json()['hoursInfo']:
-                        if 'dateTime' in hourly_result and 'indexes' in hourly_result: aqi_results.update({hourly_result['dateTime']: hourly_result['indexes'][0]['aqi']})
-                    if 'nextPageToken' in response.json():
-                        data.update({'pageToken': response.json()['nextPageToken']})
-                    else:
-                        break
-            case 'currentConditions': # Retrieve current AQI
-                data = {
-                    "location": {
-                        "latitude": latitude,
-                        "longitude": longitude
-                    }
-                }
-                response = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(data))
-                aqi_results.update({response.json()['dateTime']: response.json()['indexes'][0]['aqi']})
-            case 'forecast': # Retrieve forecasted AQI
-                data = {
-                    "universalAqi": "true",
-                    "location": {
-                        "latitude": latitude,
-                        "longitude": longitude
-                    },
-                    "period": {
-                        "startTime": (current_dt + timedelta(hours=1)).strftime(format='%Y-%m-%dT%H:%M:%SZ'),
-                        "endTime": (current_dt + timedelta(hours=96)).strftime(format='%Y-%m-%dT%H:%M:%SZ')
-                    },
-                }
-                while True: # A while loop to handle pagination
-                    response = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(data))
-                    for hourly_forecast in response.json()['hourlyForecasts']:
-                        aqi_results.update({hourly_forecast['dateTime']: hourly_forecast['indexes'][0]['aqi']})
-                    if 'nextPageToken' in response.json():
-                        data.update({'pageToken': response.json()['nextPageToken']})
-                    else:
-                        break
-
-    # Generate figure
-    figure = generate_figure(aqi_results, current_dt)
+    aqi_figure, aqi_results = generate_aqi_figure(current_dt, latitude, longitude)
+    weather_figure, weather_results = generate_weather_figure(latitude, longitude)
 
     # Ask google gemini to make a recommendation for the patient, given their age, sex, health records, and AQI forecast.
     genai.configure(api_key=os.getenv('GOOGLE_GEMINI_API_KEY'))
@@ -169,7 +122,7 @@ def handle_callback(href):
         current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ'),
         aqi_results
     )
-    gemini_response = model.generate_content(prompt)
+    #gemini_response = model.generate_content(prompt)
 
     # Render the patient's details, records, detected address, and AQI visualization
     return (
@@ -182,6 +135,7 @@ def handle_callback(href):
         medication_administrations_table,
         f"📍 {address}",
         maps_iframe,
-        gemini_response.text,
-        figure
+        "This is Gemini's response", #gemini_response.text,
+        aqi_figure,
+        weather_figure
     )

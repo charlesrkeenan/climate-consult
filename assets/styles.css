@@ -49,12 +49,11 @@ h3 {
     overflow: hidden; /* Prevent overflow */
 }
 
-#aqi-row {
+#environmental-data-row {
     display: flex;
     flex-direction: row;
     flex: 1 1 36%;
     overflow: hidden; /* Prevent overflow */
-    border-top: 4px solid grey;
     background-color: #f1f1f1;
 }
 
@@ -113,6 +112,7 @@ h3 {
     box-sizing: border-box;
     padding: 0% 0% 2% 2%;
     flex: 1 1 30%;
+    border-top: 4px solid grey;
 }
 
 #gemini-response {
@@ -123,7 +123,47 @@ h3 {
     flex: 1;
 }
 
-#aqi-graph {
-    overflow: auto;
+.environmental-data-tabs {
     flex: 1 1 70%;
+    display: flex;
+}
+
+.figure-tab {
+    flex: 1 1 100%;
+    overflow: hidden;
+    display: flex;
+}
+
+.health-record-tab-label {
+    padding: 1em 1% 1% 1% !important;
+    background-color: #d8d8d8 !important;
+    border-bottom: 0px !important;
+}
+
+.health-records-selected-tab-label {
+    padding: 1em 1% 1% 1% !important;
+    font-weight: bold !important;
+    background-color: #FFFFFF !important;
+}
+
+.tab-label {
+    padding: 1em 1% 1% 1% !important;
+    background-color: #d8d8d8 !important;
+    border-bottom: 0px !important;
+    border-top: 4px solid grey !important;
+}
+.selected-tab-label {
+    padding: 1em 1% 1% 1% !important;
+    background-color: #f1f1f1 !important;
+    font-weight: bold !important;
+    border-top: 4px solid #1975FA !important;
+}
+#aqi-graph {
+    overflow: hidden;
+    flex: 1 1 100%;
+}
+
+#temperature-graph {
+    overflow: hidden;
+    flex: 1 1 100%;
 }
