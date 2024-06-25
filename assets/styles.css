@@ -151,12 +151,18 @@ h3 {
     background-color: #d8d8d8 !important;
     border-bottom: 0px !important;
     border-top: 4px solid grey !important;
+    border-left: 1px solid grey !important;
+    border-right: 0px;
+
 }
 .selected-tab-label {
     padding: 1em 1% 1% 1% !important;
     background-color: #f1f1f1 !important;
     font-weight: bold !important;
     border-top: 4px solid #1975FA !important;
+    border-bottom: 0px !important;
+    border-left: 1px solid grey !important;
+    border-right: 0px;
 }
 #aqi-graph {
     overflow: hidden;
