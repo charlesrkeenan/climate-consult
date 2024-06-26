@@ -25,7 +25,7 @@ h3 {
     padding: 0;
     height: 100vh;
     width: 100vw;
-    overflow: hidden; /* Prevent scrolling */
+    overflow: hidden;
 }
 
 #header {
@@ -46,14 +46,14 @@ h3 {
     display: flex;
     flex-direction: row;
     flex: 1 1 60%;
-    overflow: hidden; /* Prevent overflow */
+    overflow: hidden;
 }
 
 #environmental-data-row {
     display: flex;
     flex-direction: row;
     flex: 1 1 36%;
-    overflow: hidden; /* Prevent overflow */
+    overflow: hidden;
     background-color: #f1f1f1;
 }
 
@@ -62,8 +62,6 @@ h3 {
     display: flex;
     overflow: hidden;
     flex-direction: column;
-    /*justify-content: center;*/
-    /*align-items: center;*/
     margin: 0;
     padding: 0;
     height: 100vh;
@@ -136,7 +134,7 @@ h3 {
 
 .health-record-tab-label {
     padding: 1em 1% 1% 1% !important;
-    background-color: #d8d8d8 !important;
+    background-color: '#d8d8d8' !important;
     border-bottom: 0px !important;
 }
 
@@ -146,7 +144,7 @@ h3 {
     background-color: #FFFFFF !important;
 }
 
-.tab-label {
+.environmental-data-tab-label {
     padding: 1em 1% 1% 1% !important;
     background-color: #d8d8d8 !important;
     border-bottom: 0px !important;
@@ -155,7 +153,7 @@ h3 {
     border-right: 0px;
 
 }
-.selected-tab-label {
+.environmental-data-selected-tab-label {
     padding: 1em 1% 1% 1% !important;
     background-color: #f1f1f1 !important;
     font-weight: bold !important;

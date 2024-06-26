@@ -3,9 +3,7 @@ from fhirclient import client
 from fhirclient.models.condition import Condition
 from fhirclient.models.bundle import Bundle
 import os
-from datetime import datetime
 import urllib.parse
-import dash
 from dash import dash_table
 
 # SMART on FHIR configuration
@@ -231,15 +229,15 @@ def generate_clinical_details_table(conditions, encounters, medication_administr
 
     return conditions_table, encounters_table, medication_administrations_table
 
-def generate_prompt(sex, date_of_birth, health_conditions, encounters, medication_administrations, current_dt, aqi_results):
+def generate_prompt(sex, date_of_birth, health_conditions, encounters, medication_administrations, current_dt, combined_environmental_data):
     return f""""
     -------------------------------
     Prompt Context
 
     You have been approached by a healthcare professional seeking consultation on how to mitigate the health risks or treat the health complications 
-    associated with wildfire smoke exposure for their patient. Your role as the AI specialist is to provide a consultation based on 
-    the specific characteristics and environment of the patient, like their demographics, health conditions, medications, encounter history, and 
-    the severity of wildfire smoke exposure in their area.
+    associated with climate-related events, such as heat waves or forest fires. Your role as the AI specialist is to provide a consultation based on 
+    the specific characteristics and surrounding environment of the patient, like their demographics, health conditions, medications, encounter history, AQI, 
+    temperature, and apparent temperature.
     -------------------------------
     Patient Details
 
@@ -249,10 +247,10 @@ def generate_prompt(sex, date_of_birth, health_conditions, encounters, medicatio
     Encounters: {encounters}
     Medication Administrations: {medication_administrations}
 
-    Here are the past, present, and forecasted Air Quality Index measurements for the patient's primary address. It is a list of key-value pairs, 
-    where the key is the datetime and the value is the AQI. Right now, The current datetime is {current_dt}.
+    Here is the past, present, and forecasted environmental data (in a tabular format) for the patient's primary address. Its columns include time, 
+    air quality index measurements, temperature (Fahrenheit), and apparent temperature (Fahrenheit). Right now, The current datetime is {current_dt}.
     
-    {aqi_results}
+    {combined_environmental_data}
 
     -------------------------------
     """

@@ -2,7 +2,7 @@ import plotly.graph_objects as go
 import requests
 import os
 import json
-from datetime import timedelta
+from datetime import timedelta, datetime
 import pandas as pd
 
 def generate_aqi_figure(current_dt, latitude, longitude):
@@ -173,8 +173,10 @@ def generate_aqi_figure(current_dt, latitude, longitude):
         paper_bgcolor = '#F1F1F1',
         margin=dict(l=70, r=70, t=0, b=42),
     )
+
+    aqi_df = pd.DataFrame(list(aqi_results.items()), columns=['time', 'aqi'])
     
-    return figure, aqi_results
+    return figure, aqi_df
 
 def generate_weather_figure(latitude, longitude):
 
@@ -185,14 +187,12 @@ def generate_weather_figure(latitude, longitude):
         "current": ["temperature_2m", "apparent_temperature"],
         "hourly": ["temperature_2m", "apparent_temperature"],
         "temperature_unit": "fahrenheit",
-        "past_days": 30,
-        "forecast_days": 4
+        "past_days": 29,
+        "forecast_days": 5
     }
 
     response = requests.get(url, params=params)
-
     response = json.loads(response.content)
-    print(f"JSON-deserialized response:\n{response}")
 
     # Extract current data
     current_data = {
@@ -216,26 +216,24 @@ def generate_weather_figure(latitude, longitude):
     }
 
     # Create DataFrame
-    df = pd.DataFrame(combined_data)
+    weather_df = pd.DataFrame(combined_data)
 
-    # Convert time to datetime for proper sorting
-    df["time"] = pd.to_datetime(df["time"])
-
+    # Convert time to datetime for consistent formatting
+    weather_df["time"] = weather_df["time"].apply(lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M').strftime('%Y-%m-%dT%H:%M:%SZ'))
     # Sort by time
-    df = df.sort_values(by="time").reset_index(drop=True)
+    weather_df = weather_df.sort_values(by="time").reset_index(drop=True)
 
-    print(df)
+    current_time = response["current"]["time"]
+    # Convert the datetime string to the desired format '%Y-%m-%dT%H:%M:%SZ'
+    current_time = datetime.strptime(current_time, '%Y-%m-%dT%H:%M').strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    max_temperature = max(max(df['temperature_2m']), max(df['apparent_temperature']))
-    min_temperature = min(min(df['temperature_2m']), min(df['apparent_temperature']))
-
-    # Convert the time column to datetime
-    df['time'] = pd.to_datetime(df['time'])
-    current_time = pd.to_datetime(response["current"]["time"])
+    # Identify the top and bottom of the temperature range before plotting
+    max_temperature = max(max(weather_df['temperature_2m']), max(weather_df['apparent_temperature']))
+    min_temperature = min(min(weather_df['temperature_2m']), min(weather_df['apparent_temperature']))
 
     # Split the data into historical and forecast
-    history_mask = df['time'] <= current_time
-    forecast_mask = df['time'] >= current_time
+    history_mask = weather_df['time'] <= current_time
+    forecast_mask = weather_df['time'] >= current_time
 
     # Create the Dash Plotly figure
     figure = go.Figure()
@@ -244,8 +242,8 @@ def generate_weather_figure(latitude, longitude):
     figure.add_trace(go.Scatter(
         showlegend=True,
         name="Temperature History",
-        x=df[history_mask]['time'],
-        y=df[history_mask]['temperature_2m'],
+        x=weather_df[history_mask]['time'],
+        y=weather_df[history_mask]['temperature_2m'],
         mode='lines',
         line=dict(width=2, color='black')
     ))
@@ -254,8 +252,8 @@ def generate_weather_figure(latitude, longitude):
     figure.add_trace(go.Scatter(
         showlegend=True,
         name="Temperature Forecast",
-        x=df[forecast_mask]['time'],
-        y=df[forecast_mask]['temperature_2m'],
+        x=weather_df[forecast_mask]['time'],
+        y=weather_df[forecast_mask]['temperature_2m'],
         mode='lines',
         line=dict(dash='dot', width=2, color='black')
     ))
@@ -264,8 +262,8 @@ def generate_weather_figure(latitude, longitude):
     figure.add_trace(go.Scatter(
         showlegend=True,
         name='"Feels like" History',
-        x=df[history_mask]['time'],
-        y=df[history_mask]['apparent_temperature'],
+        x=weather_df[history_mask]['time'],
+        y=weather_df[history_mask]['apparent_temperature'],
         mode='lines',
         line=dict(width=2, color='red')
     ))
@@ -274,8 +272,8 @@ def generate_weather_figure(latitude, longitude):
     figure.add_trace(go.Scatter(
         showlegend=True,
         name='"Feels like" Forecast',
-        x=df[forecast_mask]['time'],
-        y=df[forecast_mask]['apparent_temperature'],
+        x=weather_df[forecast_mask]['time'],
+        y=weather_df[forecast_mask]['apparent_temperature'],
         mode='lines',
         line=dict(dash='dot', width=2, color='red')
     ))
@@ -353,4 +351,4 @@ def generate_weather_figure(latitude, longitude):
         margin=dict(l=70, r=70, t=0, b=42),
     )
     
-    return figure, df
+    return figure, weather_df

@@ -12,6 +12,7 @@ import googlemaps
 from datetime import datetime, timezone
 import os
 import google.generativeai as genai
+import pandas as pd
 
 # TO DO: Temperature data, rebrand as "Climate Consult", find demo tool, sign up for Kaiber AI, video/grant submission
 
@@ -45,10 +46,10 @@ layout = html.Div(id='appcontainer', children=[
                     html.Iframe(id='map-iframe', referrerPolicy="no-referrer-when-downgrade")
                 ]),
             dcc.Tabs(id='environmental-data-tabs', parent_className="environmental-data-tabs", content_className="figure-tab", children=[
-                    dcc.Tab(id='aqi-tab', label="😶‍🌫️ Air Quality", className='tab-label', selected_className='selected-tab-label', children=[
+                    dcc.Tab(id='aqi-tab', label="😶‍🌫️ Air Quality", className='environmental-data-tab-label', selected_className='environmental-data-selected-tab-label', children=[
                         dcc.Graph(id='aqi-graph')
                     ]),
-                    dcc.Tab(id='temperature-tab', label="🌡️ Temperature", className='tab-label', selected_className='selected-tab-label', children=[
+                    dcc.Tab(id='temperature-tab', label="🌡️ Temperature", className='environmental-data-tab-label', selected_className='environmental-data-selected-tab-label', children=[
                         dcc.Graph(id='temperature-graph')
                     ]),
                 ])
@@ -109,6 +110,9 @@ def handle_callback(href):
     current_dt = datetime.now(timezone.utc)
     aqi_figure, aqi_results = generate_aqi_figure(current_dt, latitude, longitude)
     weather_figure, weather_results = generate_weather_figure(latitude, longitude)
+    combined_environmental_data = pd.merge(aqi_results, weather_results, on='time', how='outer')
+    pd.set_option('display.max_rows', None)
+    print(f"Combined env data\n{combined_environmental_data}")
 
     # Ask google gemini to make a recommendation for the patient, given their age, sex, health records, and AQI forecast.
     genai.configure(api_key=os.getenv('GOOGLE_GEMINI_API_KEY'))
@@ -120,9 +124,9 @@ def handle_callback(href):
         encounters,
         medication_administrations,
         current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ'),
-        aqi_results
+        combined_environmental_data
     )
-    #gemini_response = model.generate_content(prompt)
+    gemini_response = model.generate_content(prompt)
 
     # Render the patient's details, records, detected address, and AQI visualization
     return (
@@ -135,7 +139,7 @@ def handle_callback(href):
         medication_administrations_table,
         f"📍 {address}",
         maps_iframe,
-        "This is Gemini's response", #gemini_response.text,
+        gemini_response.text,
         aqi_figure,
         weather_figure
     )
