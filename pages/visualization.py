@@ -14,7 +14,7 @@ import os
 import google.generativeai as genai
 import pandas as pd
 
-# TO DO: Temperature data, rebrand as "Climate Consult", find demo tool, sign up for Kaiber AI, video/grant submission
+# TO DO: sign up for Kaiber AI, video/grant submission
 
 dash.register_page(__name__, path='/visualization')
 app = get_app()
