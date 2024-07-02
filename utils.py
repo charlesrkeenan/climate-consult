@@ -5,6 +5,7 @@ from fhirclient.models.bundle import Bundle
 import os
 import urllib.parse
 from dash import dash_table
+import json
 
 # SMART on FHIR configuration
 app_settings = {
@@ -33,39 +34,34 @@ def generate_clinical_details_table(conditions, encounters, medication_administr
     """
     A function for processing a list of FHIR resource objects and arranging
     them in a Dash table. Conditions are processed first, then Encounters, then
-    Medication Administrations
+    Medication Administrations.
     """
     # Define the list to store condition details
     health_conditions_list = []
 
     # Iterate through each condition and collect the necessary details
     for condition in conditions:
-            
         condition_name = ''
-        if hasattr(condition, 'code'):
-            if hasattr(condition.code, 'text'):
-                condition_name = condition.code.text
-            elif hasattr(condition.code, 'coding'):
-                for coding in condition.code.coding:
-                    if hasattr(coding, 'display'):
-                        condition_name = coding.display
+        condition_json = condition.as_json() if callable(condition.as_json) else condition
+        condition = json.loads(condition_json) if isinstance(condition_json, str) else condition_json
+
+        if 'code' in condition and condition['code']:
+            code = condition['code']
+            if 'text' in code:
+                condition_name = code['text']
+            elif 'coding' in code:
+                for coding in code['coding']:
+                    if 'display' in coding:
+                        condition_name = coding['display']
                         break
-            else:
-                raise Exception("A Condition resource has no 'code' element")
 
         clinical_status = 'Unknown'
-        if hasattr(condition, 'clinicalStatus'):
-            if hasattr(condition.clinicalStatus, 'text'):
-                clinical_status = condition.clinicalStatus.text
-            if hasattr(condition.clinicalStatus, 'coding'):
-                clinical_status = condition.clinicalStatus.coding[0].code
+        if 'clinicalStatus' in condition and condition['clinicalStatus']:
+            clinical_status = condition['clinicalStatus']['coding'][0]['code'] if condition['clinicalStatus']['coding'] else 'Unknown'
 
         verification_status = 'Unknown'
-        if hasattr(condition, 'verificationStatus'):
-            if hasattr(condition.verificationStatus, 'text'):
-                verification_status = condition.verificationStatus.text
-            if hasattr(condition.verificationStatus, 'coding'):
-                verification_status = condition.verificationStatus.coding[0].code
+        if 'verificationStatus' in condition and condition['verificationStatus']:
+            verification_status = condition['verificationStatus']['coding'][0]['code'] if condition['verificationStatus']['coding'] else 'Unknown'
 
         health_conditions_list.append({
             'condition_name': condition_name,
@@ -94,7 +90,6 @@ def generate_clinical_details_table(conditions, encounters, medication_administr
         },
         style_cell={
             'textAlign': 'left',
-            #'backgroundColor': '#F1F1F1',
             'color': 'black',
             'border': '1px solid grey',
             'font-family': 'Montserrat',
@@ -109,33 +104,35 @@ def generate_clinical_details_table(conditions, encounters, medication_administr
     # Iterate through each encounter and collect the necessary details
     for encounter in encounters:
         encounter_description = ''
-        if hasattr(encounter, 'serviceType') and encounter.serviceType != None:
-            if hasattr(encounter.serviceType, 'text'):
-                encounter_description = encounter.serviceType.text
-            elif hasattr(encounter.serviceType, 'coding'):
-                for coding in encounter.serviceType.coding:
-                    if hasattr(coding, 'display'):
-                        encounter_description = coding.display
-                        break
-        if hasattr(encounter, 'type'):
-            for codeableConcept in encounter.type:
-                if hasattr(codeableConcept, 'text'):
-                    encounter_description = codeableConcept.text
-                elif hasattr(codeableConcept, 'coding'):
-                    for coding in codeableConcept.coding:
-                        if hasattr(coding, 'display'):
-                            encounter_description = coding.display
-                            break
-        elif hasattr(encounter, 'class'):
-            encounter_class = getattr(encounter, 'class')
-            if hasattr(encounter_class, 'display'):
-                encounter_description = encounter_class.display
-        else:
-            raise Exception("An Encounter resource has no human readable element to serve as a description")
+        encounter_json = encounter.as_json() if callable(encounter.as_json) else encounter
+        encounter = json.loads(encounter_json) if isinstance(encounter_json, str) else encounter_json
 
-        encounter_status = 'Unknown'
-        if hasattr(encounter, 'status'):
-            encounter_status = encounter.status
+        if 'serviceType' in encounter and encounter['serviceType']:
+            service_type = encounter['serviceType']
+            if 'text' in service_type:
+                encounter_description = service_type['text']
+            elif 'coding' in service_type:
+                for coding in service_type['coding']:
+                    if 'display' in coding:
+                        encounter_description = coding['display']
+                        break
+        elif 'type' in encounter and encounter['type']:
+            for codeable_concept in encounter['type']:
+                if 'text' in codeable_concept:
+                    encounter_description = codeable_concept['text']
+                elif 'coding' in codeable_concept:
+                    for coding in codeable_concept['coding']:
+                        if 'display' in coding:
+                            encounter_description = coding['display']
+                            break
+        elif 'class' in encounter and encounter['class']:
+            encounter_class = encounter['class']
+            if 'display' in encounter_class:
+                encounter_description = encounter_class['display']
+        else:
+            raise Exception("An Encounter resource has no human-readable element to serve as a description")
+
+        encounter_status = encounter.get('status', 'Unknown')
         encounters_list.append({
             'encounter_description': encounter_description,
             'encounter_status': encounter_status,
@@ -143,6 +140,7 @@ def generate_clinical_details_table(conditions, encounters, medication_administr
 
     # Sort encounters by status
     encounters_list.sort(key=lambda x: x['encounter_status'])
+
     # Create Encounters Dash table
     encounters_table = dash_table.DataTable(
         id='encounters-table',
@@ -160,7 +158,6 @@ def generate_clinical_details_table(conditions, encounters, medication_administr
         },
         style_cell={
             'textAlign': 'left',
-            #'backgroundColor': '#F1F1F1',
             'color': 'black',
             'border': '1px solid grey',
             'font-family': 'Montserrat',
@@ -174,24 +171,25 @@ def generate_clinical_details_table(conditions, encounters, medication_administr
 
     # Iterate through each medication administration and collect the necessary details
     for medication_administration in medication_administrations:
-            
         medication_administration_name = ''
-        if hasattr(medication_administration, 'medicationCodeableConcept'):
-            if hasattr(medication_administration.medicationCodeableConcept, 'text'):
-                medication_administration_name = medication_administration.medicationCodeableConcept.text
-            elif hasattr(medication_administration.medicationCodeableConcept, 'coding'):
-                for coding in medication_administration.medicationCodeableConcept.coding:
-                    if hasattr(coding, 'display'):
-                        medication_administration_name = coding.display
-                        break
-        elif hasattr(medication_administration, 'medicationReference'):
-            medication_administration_name = medication_administration.medicationReference.display
-        else:
-            raise Exception("A medication resource has no human readable 'medication[x]' element")
+        medication_json = medication_administration.as_json() if callable(medication_administration.as_json) else medication_administration
+        medication_administration = json.loads(medication_json) if isinstance(medication_json, str) else medication_json
 
-        medication_administration_status = 'Unknown'
-        if hasattr(medication_administration, 'status'):
-            medication_administration_status = medication_administration.status
+        if 'medicationCodeableConcept' in medication_administration and medication_administration['medicationCodeableConcept']:
+            med_codeable_concept = medication_administration['medicationCodeableConcept']
+            if 'text' in med_codeable_concept:
+                medication_administration_name = med_codeable_concept['text']
+            elif 'coding' in med_codeable_concept:
+                for coding in med_codeable_concept['coding']:
+                    if 'display' in coding:
+                        medication_administration_name = coding['display']
+                        break
+        elif 'medicationReference' in medication_administration and medication_administration['medicationReference']:
+            medication_administration_name = medication_administration['medicationReference'].get('display', '')
+        else:
+            raise Exception("A medication resource has no human-readable 'medication[x]' element")
+
+        medication_administration_status = medication_administration.get('status', 'Unknown')
 
         medication_administrations_list.append({
             'medication_administration_name': medication_administration_name,
@@ -218,7 +216,6 @@ def generate_clinical_details_table(conditions, encounters, medication_administr
         },
         style_cell={
             'textAlign': 'left',
-            #'backgroundColor': '#F1F1F1',
             'color': 'black',
             'border': '1px solid grey',
             'font-family': 'Montserrat',

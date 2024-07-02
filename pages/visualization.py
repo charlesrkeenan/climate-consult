@@ -111,8 +111,6 @@ def handle_callback(href):
     aqi_figure, aqi_results = generate_aqi_figure(current_dt, latitude, longitude)
     weather_figure, weather_results = generate_weather_figure(latitude, longitude)
     combined_environmental_data = pd.merge(aqi_results, weather_results, on='time', how='outer')
-    pd.set_option('display.max_rows', None)
-    print(f"Combined env data\n{combined_environmental_data}")
 
     # Ask google gemini to make a recommendation for the patient, given their age, sex, health records, and AQI forecast.
     genai.configure(api_key=os.getenv('GOOGLE_GEMINI_API_KEY'))
