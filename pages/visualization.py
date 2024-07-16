@@ -122,9 +122,10 @@ def handle_callback(href):
         encounters,
         medication_administrations,
         current_dt.strftime(format='%Y-%m-%dT%H:%M:%SZ'),
-        combined_environmental_data
+        combined_environmental_data.to_string(index=False, header=True)
     )
     gemini_response = model.generate_content(prompt)
+
 
     # Render the patient's details, records, detected address, and AQI visualization
     return (

@@ -245,7 +245,9 @@ def generate_prompt(sex, date_of_birth, health_conditions, encounters, medicatio
     Medication Administrations: {medication_administrations}
 
     Here is the past, present, and forecasted environmental data (in a tabular format) for the patient's primary address. Its columns include time, 
-    air quality index measurements, temperature (Fahrenheit), and apparent temperature (Fahrenheit). Right now, The current datetime is {current_dt}.
+    air quality index measurements (AQI), temperature (Fahrenheit), and apparent temperature (Fahrenheit). Right now, The current datetime is {current_dt}.
+    Please note that the AQI data and temperature data may not perfectly overlap in time, as they are collected from different sources. NaN values at the 
+    beginning and end of the time range should not be considered as missing data, but rather as the absence of data.
     
     {combined_environmental_data}
 
