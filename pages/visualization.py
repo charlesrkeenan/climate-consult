@@ -14,8 +14,6 @@ import os
 import google.generativeai as genai
 import pandas as pd
 
-# TO DO: sign up for Kaiber AI, video/grant submission
-
 dash.register_page(__name__, path='/visualization')
 app = get_app()
 
@@ -47,10 +45,16 @@ layout = html.Div(id='appcontainer', children=[
                 ]),
             dcc.Tabs(id='environmental-data-tabs', parent_className="environmental-data-tabs", content_className="figure-tab", children=[
                     dcc.Tab(id='aqi-tab', label="😶‍🌫️ Air Quality", className='environmental-data-tab-label', selected_className='environmental-data-selected-tab-label', children=[
-                        dcc.Graph(id='aqi-graph')
+                        dcc.Graph(id='aqi-graph',
+                                  config={
+                                    'displayModeBar': False  # This hides the floating toolbar
+                                })
                     ]),
                     dcc.Tab(id='temperature-tab', label="🌡️ Temperature", className='environmental-data-tab-label', selected_className='environmental-data-selected-tab-label', children=[
-                        dcc.Graph(id='temperature-graph')
+                        dcc.Graph(id='temperature-graph',
+                                  config={
+                                    'displayModeBar': False  # This hides the floating toolbar
+                                })
                     ]),
                 ])
         ]),
