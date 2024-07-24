@@ -18,8 +18,9 @@ def generate_aqi_figure(current_dt, latitude, longitude):
                         "location": {
                             "latitude": latitude,
                             "longitude": longitude
+                        },
+                        "universalAqi": True
                         }
-                    }
                 while True: # A while loop to handle pagination
                     response = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(data))
                     for hourly_result in response.json()['hoursInfo']:
@@ -33,13 +34,13 @@ def generate_aqi_figure(current_dt, latitude, longitude):
                     "location": {
                         "latitude": latitude,
                         "longitude": longitude
-                    }
+                    },
+                    "universalAqi": True
                 }
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(data))
                 aqi_results.update({response.json()['dateTime']: response.json()['indexes'][0]['aqi']})
             case 'forecast': # Retrieve forecasted AQI
                 data = {
-                    "universalAqi": "true",
                     "location": {
                         "latitude": latitude,
                         "longitude": longitude
@@ -48,6 +49,7 @@ def generate_aqi_figure(current_dt, latitude, longitude):
                         "startTime": (current_dt + timedelta(hours=1)).strftime(format='%Y-%m-%dT%H:%M:%SZ'),
                         "endTime": (current_dt + timedelta(hours=96)).strftime(format='%Y-%m-%dT%H:%M:%SZ')
                     },
+                    "universalAqi": True
                 }
                 while True: # A while loop to handle pagination
                     response = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(data))
@@ -80,13 +82,13 @@ def generate_aqi_figure(current_dt, latitude, longitude):
 
     # Add the AQI range shapes
     aqi_ranges = [
-    {"range": [300, 500], "color": "maroon", "air pollution level": "Hazardous"},
-    {"range": [200, 300], "color": "purple", "air pollution level": "Very Unhealthy"},
-    {"range": [150, 200], "color": "red", "air pollution level": "Unhealthy"},
-    {"range": [100, 150], "color": "orange", "air pollution level": "Unhealthy for Sensitive Groups"},
-    {"range": [50, 100], "color": "yellow", "air pollution level": "Moderate"},
-    {"range": [0, 50], "color": "green", "air pollution level": "Good"}
+    {"range": [80, 100], "color": "#009E3A", "air pollution level": "Excellent air quality"},
+    {"range": [60, 80], "color": "#84CF33", "air pollution level": "Good air quality"},
+    {"range": [40, 60], "color": "#FFFF00", "air pollution level": "Moderate air quality"},
+    {"range": [20, 40], "color": "#FF8C00", "air pollution level": "Low air quality"},
+    {"range": [0, 20], "color": "#FF0000", "air pollution level": "Poor air quality"},
     ]
+    
 
     # Add shapes for each AQI range
     for aqi_range in aqi_ranges:
@@ -107,7 +109,7 @@ def generate_aqi_figure(current_dt, latitude, longitude):
         x0 = current_dt,
         x1 = current_dt,
         y0 = 0,
-        y1 = 500,
+        y1 = 100,
         line = dict(
             color = "#2f2f2d",
             width = 3, 
@@ -145,7 +147,7 @@ def generate_aqi_figure(current_dt, latitude, longitude):
         xaxis=dict(tickformat='%B %-e', type = "date"),
         yaxis = dict(
             tickmode = "array",
-            tickvals = [0, 50, 100, 150, 200, 300, 500],
+            tickvals = [0, 20, 40, 60, 80, 100],
             tick0 = 0,
         ),
         showlegend=True,
@@ -175,7 +177,6 @@ def generate_aqi_figure(current_dt, latitude, longitude):
     )
 
     aqi_df = pd.DataFrame(list(aqi_results.items()), columns=['time', 'aqi'])
-    
     return figure, aqi_df
 
 def generate_weather_figure(latitude, longitude):

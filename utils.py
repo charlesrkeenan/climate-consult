@@ -233,7 +233,7 @@ def generate_prompt(sex, date_of_birth, health_conditions, encounters, medicatio
 
     You have been approached by a healthcare professional seeking consultation on how to mitigate the health risks or treat the health complications 
     associated with climate-related events, such as heat waves or forest fires. Your role as the AI specialist is to provide a consultation based on 
-    the specific characteristics and surrounding environment of the patient, like their demographics, health conditions, medications, encounter history, AQI, 
+    the specific characteristics and surrounding environment of the patient, like their demographics, health conditions, medications, encounter history, Universal AQI, 
     temperature, and apparent temperature.
     -------------------------------
     Patient Details
@@ -245,9 +245,16 @@ def generate_prompt(sex, date_of_birth, health_conditions, encounters, medicatio
     Medication Administrations: {medication_administrations}
 
     Here is the past, present, and forecasted environmental data (in a tabular format) for the patient's primary address. Its columns include time, 
-    air quality index measurements (AQI), temperature (Fahrenheit), and apparent temperature (Fahrenheit). Right now, The current datetime is {current_dt}.
-    Please note that the AQI data and temperature data may not perfectly overlap in time, as they are collected from different sources. NaN values at the 
+    universal air quality index measurements (UAQI), temperature (Fahrenheit), and apparent temperature (Fahrenheit). Right now, The current datetime is {current_dt}.
+    Please note that the UAQI data and temperature data may not perfectly overlap in time, as they are collected from different sources. NaN values at the 
     beginning and end of the time range should not be considered as missing data, but rather as the absence of data.
+
+    Furthermore, here is the scale for the Universal AQI (UAQI) values:
+    100 - 80 = "Excellent air quality"
+    79 - 60	= "Good air quality"
+    59 - 40	= "Moderate air quality"
+    39 - 20	= "Low air quality"
+    19 - 0 = "Poor air quality"
     
     {combined_environmental_data}
 
